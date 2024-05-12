@@ -15,6 +15,7 @@ func main() {
 	}
 	port := os.Args[1]
 	http.HandleFunc("/", getLeaderboardRank)
+	http.HandleFunc("/points", getLeaderboardPoints)
 	log.Fatal(http.ListenAndServe(":"+port, nil))
 }
 
@@ -43,4 +44,31 @@ func getLeaderboardRank(w http.ResponseWriter, r *http.Request) {
 	}
 
 	fmt.Fprint(w, rank)
+}
+
+func getLeaderboardPoints(w http.ResponseWriter, r *http.Request) {
+	defer func() {
+		if r := recover(); r != nil {
+			fmt.Fprint(w, "User not found")
+		}
+	}()
+	username := r.URL.Query().Get("username")
+	if username == "" {
+		http.Error(w, "username is required", http.StatusBadRequest)
+		return
+	}
+	campaign := r.URL.Query().Get("campaign")
+	if campaign == "" {
+		http.Error(w, "campaign is required", http.StatusBadRequest)
+		return
+	}
+
+	points, err := tmio.GetPlayerCampaignPoints(username, campaign)
+	if err != nil {
+		log.Println(err)
+		http.Error(w, "Player not found in top 500", http.StatusInternalServerError)
+		return
+	}
+
+	fmt.Fprint(w, points)
 }
